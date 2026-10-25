@@ -1,0 +1,48 @@
+:root {
+  color-scheme: dark;
+  --ink: #f2f5ee;
+  --muted: #b7c4b0;
+  --panel: rgba(18, 28, 20, 0.72);
+  --accent: #8fd47c;
+  --danger: #ff9a8a;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #1b2a1f; overscroll-behavior: none; }
+body { font: 14px/1.4 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: var(--ink); }
+#game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; outline: none; touch-action: none; }
+
+#hud { position: fixed; inset: 0; pointer-events: none; padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); }
+#hud > * { position: absolute; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6); }
+#title { top: max(12px, env(safe-area-inset-top)); left: max(14px, env(safe-area-inset-left)); font-weight: 700; letter-spacing: 0.14em; font-size: 15px; }
+#title span { font-weight: 400; letter-spacing: 0.04em; color: var(--muted); font-size: 12px; margin-left: 6px; }
+#fps { top: max(12px, env(safe-area-inset-top)); right: max(14px, env(safe-area-inset-right)); font-variant-numeric: tabular-nums; color: var(--accent); font-weight: 600; }
+#help { left: 50%; bottom: max(14px, env(safe-area-inset-bottom)); transform: translateX(-50%); white-space: nowrap; color: var(--muted); background: var(--panel); padding: 6px 12px; border-radius: 999px; font-size: 13px; }
+#help .sep { opacity: 0.5; margin: 0 4px; }
+kbd { display: inline-block; min-width: 1.6em; padding: 1px 5px; margin: 0 1px; border-radius: 4px; text-align: center; font: 600 11px/1.5 ui-monospace, Menlo, Consolas, monospace; color: var(--ink); background: rgba(255, 255, 255, 0.14); border: 1px solid rgba(255, 255, 255, 0.22); }
+#restart { right: max(14px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom)); pointer-events: auto; }
+
+button { font: 600 13px/1 inherit; color: #10200f; background: var(--accent); border: 0; border-radius: 8px; padding: 9px 14px; cursor: pointer; }
+button:hover { filter: brightness(1.08); }
+button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+button.secondary { color: var(--ink); background: rgba(255, 255, 255, 0.14); }
+button[hidden], #error[hidden] { display: none; }
+
+#loading, #error { position: fixed; inset: 0; display: grid; place-items: center; padding: 16px; }
+#loading { background: radial-gradient(ellipse at center, #26402a 0%, #121c14 80%); transition: opacity 0.35s ease; z-index: 5; }
+#loading.done { opacity: 0; pointer-events: none; }
+#error { background: rgba(8, 12, 9, 0.72); z-index: 10; }
+.panel { width: min(440px, 100%); padding: 20px 22px; border-radius: 14px; background: rgba(18, 28, 20, 0.92); border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45); }
+#loading-text { margin-bottom: 12px; color: var(--muted); }
+.bar { height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.12); overflow: hidden; }
+#loading-bar { height: 100%; width: 0%; background: var(--accent); transition: width 0.2s ease; }
+#error h2 { margin: 0 0 8px; font-size: 17px; color: var(--danger); }
+#error p { margin: 0 0 10px; }
+#error pre { margin: 0 0 14px; max-height: 120px; overflow: auto; padding: 8px 10px; border-radius: 8px; background: rgba(0, 0, 0, 0.35); color: var(--muted); font: 11px/1.4 ui-monospace, Menlo, Consolas, monospace; white-space: pre-wrap; word-break: break-word; }
+#error pre:empty { display: none; }
+.actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+@media (max-width: 640px) {
+  #title span { display: none; }
+  #help { white-space: normal; text-align: center; width: calc(100% - 28px); border-radius: 12px; font-size: 12px; }
+  #restart { bottom: calc(max(14px, env(safe-area-inset-bottom)) + 52px); }
+}
