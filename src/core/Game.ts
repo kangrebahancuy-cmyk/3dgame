@@ -5,6 +5,7 @@ import { Player } from '../character/Player';
 import type { GameConfig } from '../config';
 import { InputController } from '../input/InputController';
 import type { Hud } from '../ui/Hud';
+import { NatureLoadError } from '../world/forest/NatureAssetLoader';
 import { World } from '../world/World';
 
 /** Wires engine, scene, world, input, player, camera and HUD together and owns the frame loop. */
@@ -25,7 +26,7 @@ export class Game {
     private readonly cfg: GameConfig,
   ) {
     hud.onRestart(() => this.restart());
-    hud.onRetry(() => void this.loadPlayer());
+    hud.onRetry(() => void this.loadContent());
   }
 
   async start(): Promise<void> {
@@ -42,7 +43,7 @@ export class Game {
     scene.skipPointerMovePicking = true;
     this.scene = scene;
 
-    this.hud.showLoading('Building the world…', 0.05);
+    this.hud.showLoading('Building the world…', 0.03);
     this.world = new World(scene, this.cfg.world);
     this.cam = new GameCamera(scene, this.cfg.camera);
     this.cam.snap(0, 0, 0);
@@ -53,17 +54,37 @@ export class Game {
     window.addEventListener('resize', () => engine.resize());
     this.canvas.focus();
 
-    await this.loadPlayer();
+    await this.loadContent();
     (window as unknown as { __game?: unknown }).__game = { getState: () => this.debugState() };
+  }
+
+  private forestLoaded = false;
+
+  /** Loads the forest (once) and then the character; each stage reports its own readable error with a retry. */
+  private async loadContent(): Promise<void> {
+    if (!this.forestLoaded && this.world) {
+      try {
+        await this.world.load((text, f) => this.hud.showLoading(text, 0.05 + 0.6 * f));
+        this.forestLoaded = true;
+      } catch (e) {
+        if (e instanceof NatureLoadError) {
+          this.hud.showError(`The forest could not be loaded. ${e.message}`, e.detail); // exact file names + errors
+        } else {
+          this.hud.showError('The forest map could not be built.', e);
+        }
+        return;
+      }
+    }
+    await this.loadPlayer();
   }
 
   /** Loads the character (shows progress and a readable error with a retry button on failure). */
   private async loadPlayer(): Promise<void> {
     if (this.loading || !this.scene || !this.world || !this.cam) return;
     this.loading = true;
-    this.hud.showLoading('Loading character…', 0.1);
+    this.hud.showLoading('Loading character…', 0.7);
     try {
-      const character = await loadCharacter(this.scene, this.cfg.character, (f) => this.hud.showLoading('Loading character…', 0.1 + 0.85 * f));
+      const character = await loadCharacter(this.scene, this.cfg.character, (f) => this.hud.showLoading('Loading character…', 0.7 + 0.28 * f));
       for (const m of character.meshes) this.world.addShadowCaster(m);
       this.player = new Player(character, this.cfg, this.world.collision);
       this.restart();

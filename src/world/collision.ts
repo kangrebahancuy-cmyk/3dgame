@@ -17,6 +17,15 @@ export class CollisionWorld {
   private cr: number[] = [];
   /** Radius (m) of the walkable area around the origin. Infinity = unbounded. */
   boundsRadius = Infinity;
+  /** Half extents (m) of an axis-aligned rectangular walkable area centred on the origin. Infinity = unbounded. */
+  private halfX = Infinity;
+  private halfZ = Infinity;
+
+  /** Restricts the walkable area to the rectangle |x| <= halfX, |z| <= halfZ (the forest map is a square). */
+  setRectBounds(halfX: number, halfZ: number): void {
+    this.halfX = halfX;
+    this.halfZ = halfZ;
+  }
 
   get count(): number {
     return this.cr.length;
@@ -91,6 +100,16 @@ export class CollisionWorld {
           moved = true;
           hit = true;
         }
+      }
+      if (this.halfX !== Infinity) {
+        const mx = this.halfX - radius;
+        if (body.x > mx) { body.x = mx; if (body.vx > 0) body.vx = 0; moved = hit = true; }
+        else if (body.x < -mx) { body.x = -mx; if (body.vx < 0) body.vx = 0; moved = hit = true; }
+      }
+      if (this.halfZ !== Infinity) {
+        const mz = this.halfZ - radius;
+        if (body.z > mz) { body.z = mz; if (body.vz > 0) body.vz = 0; moved = hit = true; }
+        else if (body.z < -mz) { body.z = -mz; if (body.vz < 0) body.vz = 0; moved = hit = true; }
       }
       if (!moved) break;
     }
