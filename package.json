@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
+    "catalog": "python3 tools/nature_catalog.py",
     "convert:character": "python3 tools/fbx_to_glb.py \"assets/Fantasy_Heroes_Free/FBX/Characters/Hero.fbx\" \"assets/Fantasy_Heroes_Free/Texture/Texture.png\" public/models/hero.glb"
   },
   "dependencies": {

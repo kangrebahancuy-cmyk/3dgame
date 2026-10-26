@@ -66,3 +66,11 @@ Method: 2-bone analytic IK on both legs with a forward knee pole; during stance 
 `docs/clips-preview.png` shows frames of all three clips rendered from the GLB alone by `tools/preview.py` (a software rasteriser — **not** Babylon.js).
 
 These are procedural, low-effort clips meant to make the movement system testable. For production, replace them with hand-authored or retargeted mocap clips on the same 27-bone skeleton (the loader only needs clips named `Idle`, `Walk`, `Run` and a matching `distancePerCycle` in `hero.meta.json`).
+
+## Kenney Nature Kit (forest map)
+
+`assets/kenney_nature-kit/Models/GLTF format/` holds 329 self-contained GLBs (flat material colours only: no textures, no animations, no skins).
+148 of them are catalogued for the forest map (106 are placed in the current layout), listed in `tools/nature_catalog.py`. `python3 tools/nature_catalog.py` (or `npm run catalog`) measures every
+file (bounding box, footprint, trunk radius, SHA-1), fails loudly if a file is missing or not self-contained, writes
+`src/world/forest/NatureCatalog.ts` and copies exactly those files, unchanged, to `public/models/nature/` so Vite serves them. The originals are never modified.
+Note Kenney's own spelling `tree_fat_darkh`. The kit's authored colours are a stylised teal/orange palette (`Preview.png`); the game recolours by material name unless `?palette=kenney` is used.

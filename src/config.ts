@@ -1,4 +1,5 @@
 /** All tunable gameplay parameters live here. Angles are in degrees unless the name says rad. */
+import type { PaletteName } from './world/forest/NaturePalette';
 
 export interface MovementConfig {
   /** Walking speed in m/s (hold Shift). */
@@ -42,18 +43,9 @@ export interface CameraConfig {
 }
 
 export interface WorldConfig {
-  seed: number;
-  /** Radius (m) of the walkable play area. */
-  playRadius: number;
-  /** Side length (m) of the square ground mesh. */
-  groundSize: number;
-  groundSegments: number;
-  /** Radius (m) around the origin kept free of random props. */
-  startClearRadius: number;
-  treeCount: number;
-  rockCount: number;
-  bushCount: number;
   shadowMapSize: number;
+  /** Colours of the Kenney models: 'forest' (natural recolour, default) or 'kenney' (as authored). URL: ?palette=kenney */
+  palette: PaletteName;
 }
 
 export interface CharacterConfig {
@@ -103,15 +95,8 @@ export const DEFAULT_CONFIG: GameConfig = {
     minClearance: 1.5,
   },
   world: {
-    seed: 20260,
-    playRadius: 34,
-    groundSize: 180,
-    groundSegments: 180,
-    startClearRadius: 5,
-    treeCount: 26,
-    rockCount: 14,
-    bushCount: 22,
     shadowMapSize: 2048,
+    palette: 'forest',
   },
   character: {
     modelUrl: 'models/hero.glb',
