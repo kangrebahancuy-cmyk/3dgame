@@ -11,7 +11,7 @@ npm install
 npm run dev        # http://localhost:5173
 npm run build      # type-check + production build into dist/
 npm run preview    # serve the production build (http://localhost:4173)
-npm test           # 46 unit tests: movement, collision, camera, blending, GLB, forest layout, reachability
+npm test           # 75 unit tests: movement, collision, camera, blending, GLB, forest layout, items/inventory/equipment
 npm run catalog    # re-verify the Kenney models and regenerate src/world/forest/NatureCatalog.ts
 ```
 
@@ -24,7 +24,11 @@ Requires Node 18+ and a WebGL-capable browser (developed for desktop Chrome on W
 | `W A S D` / arrow keys | move (relative to the camera; diagonals are normalised) |
 | `Shift` (hold) | walk instead of run |
 | Mouse wheel | zoom the camera |
-| Restart button | put the character back at the start |
+| `E` | pick up the item you are standing next to (a prompt shows its name) |
+| `I` / **Inventory** button | open / close the inventory (`Esc` or ✕ also closes) |
+| Click a slot | select it: details + **Use / Equip / Unequip / Drop** buttons |
+| Click the character name | rename (Enter = save, Esc = cancel; game keys are ignored while typing) |
+| Restart button | put the character back at the start (inventory and equipment are kept) |
 
 ## What is implemented
 
@@ -34,6 +38,7 @@ Requires Node 18+ and a WebGL-capable browser (developed for desktop Chrome on W
 * Idle / Walk / Run blended by actual ground speed; gait cadence tied to ground speed (no foot sliding).
 * Collision with tree trunks and large rocks only (circle colliders, slide along them) and the square map boundary.
 * Flat ground (`TERRAIN_AMPLITUDE = 0`); feet and camera clearance still use the same analytic height function.
+* Character, inventory (24 slots), equipment (weapon / helmet / armor / boots), item pickups: see [docs/CHARACTER_SYSTEM.md](docs/CHARACTER_SYSTEM.md).
 * First forest map: 4 dirt paths, spawn clearing, ~1000 real Kenney objects as instances, painted forest floor, exit placeholders.
 * Isometric camera (45° azimuth, 50° elevation), smoothed follow, terrain clearance, wheel zoom.
 * Directional sun + hemispheric ambient, PCF shadows, fog. HUD: title, FPS, controls, restart, loading bar, error panel with retry.
@@ -66,7 +71,11 @@ src/
     NatureAssetLoader.ts    loads each GLB once, bakes it into one mesh, places instances, reports exact file + error
     GroundPainter.ts        Canvas2D forest floor (grass, dirt paths, clearing, leaf litter)
     ForestMap.ts            Babylon glue: ground quads, populate, collision, shadow extents
+  game/                     character system (pure, unit-tested): items.ts, stats.ts, inventory.ts, equipment.ts,
+                            playerState.ts (single source of truth), pickups.ts, session.ts; PickupView.ts = Babylon visuals
   ui/Hud.ts                 DOM overlay
+  ui/GameUi.ts, icons.ts    status panel, inventory/equipment/details panel, toasts, interaction prompt
+  input/shortcuts.ts        pure: I / E / Esc mapping and the "is the player typing?" guard
 tools/                      FBX→GLB converter, gait generator, nature_catalog.py, map_preview.py, layout_plot.py (Python)
 tests/                      node:test suites (run with tsx)
 public/models/hero.glb      converted player model with Idle/Walk/Run (+ hero.meta.json)
@@ -88,12 +97,13 @@ same pack: `python3 tools/fbx_to_glb.py <character.fbx> <texture.png> public/mod
 
 Verified here (sandbox with no npm registry access):
 
-* All pure-logic modules type-check under `strict` TypeScript and **46/46 unit tests pass** (`npm test`), including: catalog vs. the real GLB files (size, SHA-1, no external URIs, public copy identical), deterministic layout, no overlapping solids, ≥ 1.06 m between any two solids, free clearing and path corridors, flood-fill reachability of all four exits and of > 97 % of the free ground, the real `MovementModel` walking every path to its exit without touching an obstacle, and sliding along a tree.
+* All pure-logic modules type-check under `strict` TypeScript and **75/75 unit tests pass** (`npm test`), including the 29 character-system tests (potion, stacking, full inventory, equip/unequip swaps, 200 equipment changes without stat drift, drop/pickup conservation, shortcut guard) and: catalog vs. the real GLB files (size, SHA-1, no external URIs, public copy identical), deterministic layout, no overlapping solids, ≥ 1.06 m between any two solids, free clearing and path corridors, flood-fill reachability of all four exits and of > 97 % of the free ground, the real `MovementModel` walking every path to its exit without touching an obstacle, and sliding along a tree.
 * The ground painter was run in headless Chromium (Canvas2D) and looked at; the forest was rendered offline **from the real GLB files** with `tools/map_preview.py` (`docs/forest-preview.png`, collision circles checked against the trunks). That renderer is *not* Babylon: no shadows, no fog, different lighting.
+* The character UI (`GameUi`, `InputController`, `GameSession`) was driven in headless Chromium with real keyboard/mouse events (`tools/ui_harness/`; DOM only, no WebGL): pickup with E, I/Esc, Use/Equip/Unequip/Drop buttons, full-inventory handling, rename input not triggering shortcuts, phone layout. Screenshots: `docs/inventory-ui.png`.
 * `hero.glb` structure, skinning data, texture, clip looping and gait foot-planting (`docs/clips-preview.png`).
 
 **Not verified here:** `npm install`, `npm run dev`, `npm run build`, the Babylon.js / Vite glue (`CharacterLoader`, `World`, `ForestMap`,
-`NatureAssetLoader`, `GameCamera`, `Game`, …) and any real browser run of the game. The sandbox blocks the npm registry (HTTP 403), so Babylon.js and Vite
+`NatureAssetLoader`, `PickupView`, `GameCamera`, `Game`, …) and any real browser run of the game. The sandbox blocks the npm registry (HTTP 403), so Babylon.js and Vite
 could not be installed and those files were never compiled against Babylon or executed (they were only type-checked against loose stubs, which catches
 typos and unused code but not wrong Babylon API use). Run `npm install && npm run build && npm run dev` and expect to fix small API or type mismatches,
 then use `window.__game.getState()` in the console to inspect position, speed, blend weights and camera while testing.

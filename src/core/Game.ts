@@ -3,7 +3,10 @@ import { GameCamera } from '../camera/GameCamera';
 import { CharacterLoadError, loadCharacter } from '../character/CharacterLoader';
 import { Player } from '../character/Player';
 import type { GameConfig } from '../config';
+import { GameSession } from '../game/session';
+import { PickupView } from '../game/PickupView';
 import { InputController } from '../input/InputController';
+import { GameUi } from '../ui/GameUi';
 import type { Hud } from '../ui/Hud';
 import { NatureLoadError } from '../world/forest/NatureAssetLoader';
 import { World } from '../world/World';
@@ -16,6 +19,9 @@ export class Game {
   private cam: GameCamera | null = null;
   private input: InputController | null = null;
   private player: Player | null = null;
+  private readonly session = new GameSession();
+  private ui: GameUi | null = null;
+  private pickupView: PickupView | null = null;
   private loading = false;
   private fpsTimer = 0;
   private readonly dir = { x: 0, z: 0 };
@@ -49,13 +55,47 @@ export class Game {
     this.cam.snap(0, 0, 0);
     this.input = new InputController(this.canvas);
 
+    // Character system: items lying in the world, the DOM UI, and the keyboard shortcuts (I, E, Esc).
+    this.pickupView = new PickupView(scene, this.session.pickups);
+    this.session.spawnInitialPickups();
+    const uiRoot = document.getElementById('game-ui');
+    if (!uiRoot) throw new Error('index.html is missing #game-ui');
+    this.ui = new GameUi(uiRoot, this.session, () => ({ x: this.player?.x ?? 0, z: this.player?.z ?? 0, yaw: this.player?.movement.yaw ?? 0 }));
+    this.input.onAction((a) => {
+      const p = this.player;
+      if (a === 'toggleInventory') this.ui?.toggleInventory();
+      else if (a === 'closePanels') this.ui?.closePanels();
+      else if (a === 'interact' && p) this.session.interact(p.x, p.z);
+    });
+    this.session.state.onChange(() => this.applyEquipmentSpeed());
+
     scene.onBeforeRenderObservable.add(() => this.tick());
     engine.runRenderLoop(() => scene.render());
     window.addEventListener('resize', () => engine.resize());
     this.canvas.focus();
 
     await this.loadContent();
-    (window as unknown as { __game?: unknown }).__game = { getState: () => this.debugState() };
+    (window as unknown as { __game?: unknown }).__game = { getState: () => this.debugState(), dev: this.devTools() };
+  }
+
+  /** Equipment speed bonus -> movement. Explicit (config.character.equipmentSpeedBonus) and 1.0 when switched off. */
+  private applyEquipmentSpeed(): void {
+    if (!this.player) return;
+    const mult = this.cfg.character.equipmentSpeedBonus ? this.session.state.stats.moveSpeedMultiplier : 1;
+    this.player.movement.speedScale = mult;
+  }
+
+  /** Console helpers for manual testing: window.__game.dev.damage(30), .gainXp(500), .fillInventory(), .state */
+  private devTools(): Record<string, unknown> {
+    const s = this.session;
+    return {
+      session: s,
+      state: s.state,
+      damage: (n: number) => s.state.damage(n),
+      heal: (n: number) => s.state.heal(n),
+      gainXp: (n: number) => s.state.gainXp(n),
+      fillInventory: () => s.debugFillInventory(),
+    };
   }
 
   private forestLoaded = false;
@@ -87,6 +127,7 @@ export class Game {
       const character = await loadCharacter(this.scene, this.cfg.character, (f) => this.hud.showLoading('Loading character…', 0.7 + 0.28 * f));
       for (const m of character.meshes) this.world.addShadowCaster(m);
       this.player = new Player(character, this.cfg, this.world.collision);
+      this.applyEquipmentSpeed();
       this.restart();
       this.hud.showRestart(true);
       this.hud.hideLoading();
@@ -116,9 +157,11 @@ export class Game {
       cam.rig.moveDirection(input.forward, input.right, this.dir);
       p.update(dt, this.dir.x, this.dir.z, !input.walk); // run by default, Shift = walk
       cam.update(dt, p.x, p.y, p.z, wheel); // camera is updated AFTER the character moved: no one-frame lag/jitter
+      this.ui?.update(p.x, p.z);
     } else {
       cam.update(dt, 0, 0, 0, wheel);
     }
+    this.pickupView?.update(dt);
     this.fpsTimer += dt;
     if (this.fpsTimer >= 0.25) {
       this.fpsTimer = 0;
@@ -137,6 +180,9 @@ export class Game {
       camera: { x: this.cam.camera.position.x, y: this.cam.camera.position.y, z: this.cam.camera.position.z },
       fps: this.engine?.getFps(),
       height: p.character.height, forwardCorrection: p.character.forwardCorrection,
+      speedScale: p.movement.speedScale,
+      character: { ...this.session.state.profile }, stats: { ...this.session.state.stats }, equipment: this.session.state.equipment.snapshot(),
+      pickupsInWorld: this.session.pickups.count,
     };
   }
 }

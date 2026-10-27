@@ -19,6 +19,11 @@ export class MovementModel {
   speed = 0;
   /** True if the last step touched an obstacle or the world boundary. */
   blocked = false;
+  /**
+   * Multiplier on walk/run speed. 1 = exactly the configured speeds (the default, so nothing changes unless a caller
+   * opts in, e.g. for the optional boots bonus). Not part of the damping math: it only scales the target speed.
+   */
+  speedScale = 1;
 
   constructor(private readonly cfg: MovementConfig) {}
 
@@ -48,7 +53,7 @@ export class MovementModel {
     let tx = 0;
     let tz = 0;
     if (hasInput) {
-      const s = run ? c.runSpeed : c.walkSpeed;
+      const s = (run ? c.runSpeed : c.walkSpeed) * this.speedScale;
       tx = (dirX / len) * s; // normalised => identical speed on every heading, diagonals included
       tz = (dirZ / len) * s;
     }
