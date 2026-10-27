@@ -60,6 +60,11 @@ export interface CharacterConfig {
   animSpeedLambda: number;
   /** Speed (as a fraction of walkSpeed) at which idle has fully blended into walk. */
   idleToWalkFraction: number;
+  /**
+   * Explicit switch for the movement-speed bonus of equipment (Leather Boots: +8 %). true = the bonus scales walk/run
+   * speed (clamped to +25 % in game/stats.ts); false = movement is exactly the configured speeds whatever is worn.
+   */
+  equipmentSpeedBonus: boolean;
 }
 
 export interface GameConfig {
@@ -105,5 +110,6 @@ export const DEFAULT_CONFIG: GameConfig = {
     blendLambda: 16,
     animSpeedLambda: 14,
     idleToWalkFraction: 0.35,
+    equipmentSpeedBonus: true,
   },
 };

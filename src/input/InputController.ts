@@ -1,10 +1,14 @@
-/** Keyboard state: WASD + arrow keys for movement, Shift to walk. Mouse wheel is exposed as a zoom delta. */
+import { actionForKey, isTypingTarget, type GameAction } from './shortcuts';
+
+/** Keyboard state: WASD + arrow keys for movement, Shift to walk. Mouse wheel is exposed as a zoom delta.
+ *  UI shortcuts (I, E, Escape) are reported through `onAction`. Nothing here reacts while the player types in a text field. */
 const FORWARD = ['KeyW', 'ArrowUp'];
 const BACK = ['KeyS', 'ArrowDown'];
 const LEFT = ['KeyA', 'ArrowLeft'];
 const RIGHT = ['KeyD', 'ArrowRight'];
 const WALK = ['ShiftLeft', 'ShiftRight'];
 const HANDLED = new Set([...FORWARD, ...BACK, ...LEFT, ...RIGHT, ...WALK]);
+type ActionHandler = (action: GameAction) => void;
 
 export class InputController {
   private readonly down = new Set<string>();
@@ -15,8 +19,26 @@ export class InputController {
   right = 0;
   walk = false;
 
+  private actionHandler: ActionHandler | null = null;
+
+  /** Registers the (single) handler for UI shortcuts. */
+  onAction(handler: ActionHandler): void {
+    this.actionHandler = handler;
+  }
+
   private readonly onKeyDown = (e: KeyboardEvent): void => {
     if (e.ctrlKey || e.metaKey || e.altKey) return; // leave browser shortcuts alone
+    if (isTypingTarget(e.target)) {
+      // typing into a UI field: no movement, no shortcuts; release anything held so the character stops
+      this.down.clear();
+      return;
+    }
+    const action = actionForKey(e);
+    if (action) {
+      this.actionHandler?.(action);
+      if (action !== 'closePanels') e.preventDefault();
+      return;
+    }
     if (!HANDLED.has(e.code)) return;
     this.down.add(e.code);
     e.preventDefault(); // stops arrow keys scrolling the page
