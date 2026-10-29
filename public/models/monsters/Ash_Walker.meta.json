@@ -1,0 +1,119 @@
+{
+  "source": "assets/Orc_Free/FBX/Chatacters/Ash_Walker.fbx",
+  "texture": "assets/Orc_Free/Texture/Texture.png",
+  "height": 2.182399762741209,
+  "liftApplied": 0.0013728087702021693,
+  "forward": "+Z (glTF convention; verified from toe-ankle vector)",
+  "joints": [
+    "spine",
+    "spine.001",
+    "spine.002",
+    "spine.003",
+    "spine.004",
+    "spine.005",
+    "spine.006",
+    "shoulder.L",
+    "upper_arm.L",
+    "forearm.L",
+    "hand.L",
+    "shoulder.R",
+    "upper_arm.R",
+    "forearm.R",
+    "hand.R",
+    "pelvis.L",
+    "pelvis.R",
+    "thigh.L",
+    "shin.L",
+    "foot.L",
+    "toe.L",
+    "heel.02.L",
+    "thigh.R",
+    "shin.R",
+    "foot.R",
+    "toe.R",
+    "heel.02.R"
+  ],
+  "vertices": 6064,
+  "triangles": 2088,
+  "maxDroppedWeightFraction": 0.111103589344977,
+  "clips": {
+    "Idle": {
+      "duration": 3.2,
+      "loop": true,
+      "referenceSpeed": 0.0,
+      "distancePerCycle": 0.0,
+      "dutyFactor": 1.0,
+      "stanceTravel": 0.0,
+      "footPlanted": false,
+      "authoredBy": "tools/gait.py (procedural IK gait; the source FBX contains no animation)",
+      "diagnostics": {
+        "maxAnkleError_m": 2.0650799344971347e-07,
+        "maxReachShortfall_m": 0.0
+      }
+    },
+    "Walk": {
+      "duration": 0.6,
+      "loop": true,
+      "referenceSpeed": 1.2,
+      "distancePerCycle": 0.72,
+      "dutyFactor": 0.62,
+      "stanceTravel": 0.44639999999999996,
+      "footPlanted": true,
+      "authoredBy": "tools/gait.py (procedural IK gait; the source FBX contains no animation)",
+      "diagnostics": {
+        "maxAnkleError_m": 2.0681298885066163e-07,
+        "maxReachShortfall_m": 0.0,
+        "stanceSpeed_L": [
+          1.2000000000000002,
+          1.199999999999991,
+          1.2000000000000077
+        ],
+        "stanceAnkleY_L": [
+          0.0865727774019518,
+          0.08657277740195257
+        ],
+        "stanceSpeed_R": [
+          1.2000002013178932,
+          1.1999997938849511,
+          1.2000004439581047
+        ],
+        "stanceAnkleY_R": [
+          0.0865725791023153,
+          0.08657259357527869
+        ]
+      }
+    },
+    "Run": {
+      "duration": 0.42,
+      "loop": true,
+      "referenceSpeed": 3.4,
+      "distancePerCycle": 1.428,
+      "dutyFactor": 0.34,
+      "stanceTravel": 0.48552000000000006,
+      "footPlanted": true,
+      "authoredBy": "tools/gait.py (procedural IK gait; the source FBX contains no animation)",
+      "diagnostics": {
+        "maxAnkleError_m": 2.0572918536572245e-07,
+        "maxReachShortfall_m": 0.0,
+        "stanceSpeed_L": [
+          3.4272000000000027,
+          3.4271999999999854,
+          3.4272000000000133
+        ],
+        "stanceAnkleY_L": [
+          0.0865727774019519,
+          0.08657277740195252
+        ],
+        "stanceSpeed_R": [
+          3.4272005158095995,
+          3.42720026551107,
+          3.4272007996249783
+        ],
+        "stanceAnkleY_R": [
+          0.08657258645845872,
+          0.086572599265128
+        ]
+      }
+    }
+  }
+}

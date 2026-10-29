@@ -45,6 +45,11 @@ export class PlayerState {
     return this.statsCache;
   }
 
+  /** True while HP is zero. Combat decides what that means; the data (inventory, equipment, XP) is never touched. */
+  get isDead(): boolean {
+    return this.profile.hp <= 0;
+  }
+
   onChange(cb: () => void): () => void {
     this.changeListeners.add(cb);
     return () => this.changeListeners.delete(cb);
@@ -77,6 +82,7 @@ export class PlayerState {
 
   /** Uses the consumable in an inventory slot. A potion is refused (and NOT consumed) at full HP. */
   use(slot: number): ActionResult {
+    if (this.isDead) return this.fail('You are defeated.');
     const s = this.inventory.at(slot);
     if (!s) return this.fail('Nothing in that slot.');
     const def = getItem(s.id);
@@ -143,7 +149,7 @@ export class PlayerState {
     this.changed();
   }
 
-  // ------------------------------------------------------------------------------ vitals (used by future combat)
+  // ------------------------------------------------------------------------------ vitals (used by combat)
 
   damage(amount: number): void {
     if (!(amount > 0)) return;
@@ -154,6 +160,29 @@ export class PlayerState {
   heal(amount: number): void {
     if (!(amount > 0)) return;
     this.profile.hp = clamp(this.profile.hp + amount, 0, this.stats.maxHp);
+    this.changed();
+  }
+
+  /** Spends mana. All-or-nothing: returns false (and changes nothing) when there is not enough. */
+  spendMana(amount: number): boolean {
+    if (!(amount > 0)) return true;
+    if (this.profile.mana < amount) return false;
+    this.profile.mana = clamp(this.profile.mana - amount, 0, this.stats.maxMana);
+    this.changed();
+    return true;
+  }
+
+  restoreMana(amount: number): void {
+    if (!(amount > 0) || this.profile.mana >= this.stats.maxMana) return;
+    this.profile.mana = clamp(this.profile.mana + amount, 0, this.stats.maxMana);
+    this.changed();
+  }
+
+  /** Brings a defeated character back with a fraction of its HP and full mana. Inventory/equipment/XP are untouched. */
+  revive(hpFraction = 0.5): void {
+    if (!this.isDead) return;
+    this.profile.hp = Math.max(1, Math.round(this.stats.maxHp * clamp(hpFraction, 0, 1)));
+    this.profile.mana = this.stats.maxMana;
     this.changed();
   }
 

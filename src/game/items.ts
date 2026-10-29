@@ -18,6 +18,14 @@ export interface ItemUse {
   healHp?: number;
 }
 
+/** How a weapon behaves in combat. Items without it (and an empty weapon slot) use the unarmed profile in combat/weapon.ts. */
+export interface WeaponStats {
+  /** Reach (m), measured from the player's centre to the target's surface. */
+  readonly range: number;
+  /** Seconds between basic attacks. */
+  readonly cooldown: number;
+}
+
 export interface ItemDef {
   /** Unique, stable identity (never shown to the player). */
   readonly id: string;
@@ -28,6 +36,7 @@ export interface ItemDef {
   readonly maxStack: number;
   readonly bonus?: StatBonus;
   readonly use?: ItemUse;
+  readonly weapon?: WeaponStats;
   /** Placeholder icon: a shape key (see ui/icons.ts) and its colour. */
   readonly icon: { readonly shape: IconShape; readonly color: string };
 }
@@ -55,6 +64,7 @@ export const ITEMS = define({
     description: 'A sturdy training sword. +4 Attack.',
     maxStack: 1,
     bonus: { attack: 4 },
+    weapon: { range: 2.4, cooldown: 0.85 },
     icon: { shape: 'sword', color: '#c8935a' },
   },
   iron_helmet: {
