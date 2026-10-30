@@ -103,20 +103,93 @@ button[hidden], #error[hidden] { display: none; }
 .details .actions { margin-top: 8px; justify-content: flex-start; flex-wrap: wrap; }
 button:disabled { opacity: 0.45; cursor: not-allowed; filter: none; }
 
-.toasts { position: absolute; left: 50%; bottom: calc(max(14px, env(safe-area-inset-bottom)) + 96px); transform: translateX(-50%); display: grid; gap: 6px; justify-items: center; pointer-events: none; width: min(92vw, 420px); }
+.toasts { position: absolute; left: 50%; bottom: calc(max(14px, env(safe-area-inset-bottom)) + 168px); transform: translateX(-50%); display: grid; gap: 6px; justify-items: center; pointer-events: none; width: min(92vw, 420px); }
 .toast { padding: 7px 14px; border-radius: 999px; font-size: 13px; font-weight: 600; background: rgba(18, 28, 20, 0.9); border: 1px solid rgba(255, 255, 255, 0.14); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35); animation: toast-in 0.18s ease-out; transition: opacity 0.3s ease, transform 0.3s ease; text-align: center; }
 .toast.success { border-color: rgba(143, 212, 124, 0.6); }
 .toast.error { border-color: rgba(255, 154, 138, 0.7); color: #ffd2ca; }
 .toast.warning { border-color: rgba(255, 215, 106, 0.7); }
 .toast.out { opacity: 0; transform: translateY(6px); }
 @keyframes toast-in { from { opacity: 0; transform: translateY(8px); } }
-.prompt { position: absolute; left: 50%; bottom: calc(max(14px, env(safe-area-inset-bottom)) + 52px); transform: translateX(-50%); padding: 7px 14px; border-radius: 999px; background: var(--panel); border: 1px solid rgba(255, 255, 255, 0.16); font-size: 13.5px; white-space: nowrap; pointer-events: none; }
+.prompt { position: absolute; left: 50%; bottom: calc(max(14px, env(safe-area-inset-bottom)) + 120px); transform: translateX(-50%); padding: 7px 14px; border-radius: 999px; background: var(--panel); border: 1px solid rgba(255, 255, 255, 0.16); font-size: 13.5px; white-space: nowrap; pointer-events: none; }
 .prompt strong { color: #ffd76a; }
 
 @media (max-width: 640px) {
   .status-panel { width: 200px; padding: 8px 10px; }
   .inv-panel { top: auto; bottom: 8px; right: 8px; left: 8px; width: auto; max-height: 68vh; }
   .toasts { bottom: auto; top: 226px; }
-  .prompt { bottom: calc(max(14px, env(safe-area-inset-bottom)) + 84px); white-space: normal; text-align: center; width: max-content; max-width: 92vw; }
+  .prompt { bottom: calc(max(14px, env(safe-area-inset-bottom)) + 156px); white-space: normal; text-align: center; width: max-content; max-width: 92vw; }
 }
-@media (prefers-reduced-motion: reduce) { .fill, .toast { transition: none; animation: none; } }
+@media (prefers-reduced-motion: reduce) { .fill, .toast, .dmg { transition: none; animation: none; } .hurt-flash.on, .skill.fail, .skill.used, .target-frame.far-pulse { animation: none; } }
+
+/* ------------------------------------------------------------------ combat UI */
+/* #game-ui > * sets pointer-events:auto; the layer must stay transparent to the mouse or it would swallow clicks meant for the 3D view */
+#game-ui > .combat-layer { position: absolute; inset: 0; pointer-events: none; }
+.combat-layer > * { pointer-events: none; }
+.combat-layer .target-frame, .combat-layer .hotbar, .combat-layer .death-panel { pointer-events: auto; }
+.combat-layer [hidden] { display: none; }
+
+.target-frame { position: absolute; top: max(12px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); width: min(300px, calc(100vw - 340px)); min-width: 220px; padding: 8px 10px 9px; border-radius: 12px; background: var(--panel); border: 1px solid rgba(255, 255, 255, 0.12); backdrop-filter: blur(4px); display: grid; gap: 5px; }
+.target-frame.far { border-color: rgba(255, 154, 138, 0.7); }
+.tf-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.tf-name { font-weight: 700; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.tf-level { font-weight: 700; font-size: 12px; white-space: nowrap; }
+.tf-level.even { color: #ffd76a; } .tf-level.hard { color: #ff8a7a; } .tf-level.easy { color: #a9b5a3; }
+.tf-tier { font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.tf-tier.aggressive { color: #ffb36b; } .tf-tier.elite { color: #e58cff; }
+.tf-close { padding: 2px 7px; font-size: 11px; line-height: 1.2; }
+.tf-bar { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; font-size: 12px; }
+.tf-bar .track { height: 12px; }
+.tf-hp { font-variant-numeric: tabular-nums; min-width: 66px; text-align: right; }
+.tf-hint { min-height: 0; font-size: 12px; font-weight: 600; color: #ffd2ca; }
+.tf-hint:empty { display: none; }
+.target-frame.far-pulse { animation: far-pulse 0.45s ease; }
+@keyframes far-pulse { 30% { transform: translateX(-50%) scale(1.04); border-color: #ff8a7a; } }
+
+.mob-layer, .dmg-layer { position: absolute; inset: 0; overflow: hidden; }
+.mob-bar { position: absolute; left: 0; top: 0; width: 54px; will-change: transform; }
+.mob-bar .track { height: 6px; border-radius: 3px; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6); }
+.mob-bar .fill { transition: width 0.12s ease; border-radius: 3px; }
+.mob-bar.targeted { width: 68px; }
+.mob-bar.targeted .track { box-shadow: 0 0 0 1px rgba(255, 215, 106, 0.95); height: 8px; }
+
+.dmg { position: absolute; left: 0; top: 0; font-weight: 800; font-size: 18px; letter-spacing: 0.02em; white-space: nowrap; color: #fff; text-shadow: 0 1px 3px #000, 0 0 6px rgba(0, 0, 0, 0.7); will-change: transform, opacity; }
+.dmg.crit { color: #ffb347; font-size: 24px; }
+.dmg.to-player { color: #ff6b6b; }
+.dmg.miss { color: #cfd8cc; font-size: 14px; font-weight: 700; }
+
+.hotbar { position: absolute; left: 50%; bottom: calc(max(14px, env(safe-area-inset-bottom)) + 40px); transform: translateX(-50%); display: flex; gap: 8px; padding: 6px 8px; border-radius: 14px; background: var(--panel); border: 1px solid rgba(255, 255, 255, 0.1); backdrop-filter: blur(4px); }
+.hotbar.disabled { opacity: 0.4; pointer-events: none; }
+.skill { all: unset; box-sizing: border-box; position: relative; width: 54px; height: 54px; overflow: hidden; cursor: pointer; border-radius: 10px; background: linear-gradient(160deg, rgba(120, 160, 110, 0.35), rgba(0, 0, 0, 0.5)); border: 1px solid rgba(255, 255, 255, 0.2); color: #e8f3e0; }
+.skill:hover { border-color: rgba(255, 255, 255, 0.5); }
+.skill:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.skill-icon { position: absolute; inset: 9px; display: block; }
+.skill-key { position: absolute; left: 4px; top: 2px; font: 700 11px/1 ui-monospace, Menlo, Consolas, monospace; color: #fff; text-shadow: 0 1px 2px #000; }
+.skill-cost { position: absolute; right: 4px; bottom: 2px; font: 700 11px/1 inherit; color: #8ec5ff; text-shadow: 0 1px 2px #000; }
+.skill-cd { position: absolute; left: 0; right: 0; bottom: 0; height: 0; background: rgba(0, 0, 0, 0.62); }
+.skill-cd-text { position: absolute; inset: 0; display: grid; place-items: center; font: 800 18px/1 inherit; color: #fff; text-shadow: 0 1px 3px #000; }
+.skill.nomana .skill-icon { opacity: 0.4; filter: grayscale(0.6); }
+.skill.nomana .skill-cost { color: #ff8a7a; }
+.skill.used { animation: skill-used 0.3s ease; }
+.skill.fail { animation: skill-fail 0.35s ease; }
+@keyframes skill-used { 40% { transform: scale(0.92); border-color: var(--accent); box-shadow: 0 0 10px rgba(143, 212, 124, 0.7); } }
+@keyframes skill-fail { 25% { transform: translateX(-3px); border-color: #ff8a7a; } 50% { transform: translateX(3px); border-color: #ff8a7a; } 75% { transform: translateX(-2px); } }
+
+.hurt-flash { position: absolute; inset: 0; opacity: 0; box-shadow: inset 0 0 90px 24px rgba(220, 30, 30, 0.75); }
+.hurt-flash.on { animation: hurt-flash 0.45s ease-out; }
+@keyframes hurt-flash { 0% { opacity: 1; } 100% { opacity: 0; } }
+
+.death-panel { position: absolute; left: 50%; top: 38%; transform: translate(-50%, -50%); width: min(340px, calc(100vw - 28px)); padding: 18px 20px; text-align: center; border-radius: 14px; background: rgba(28, 12, 12, 0.92); border: 1px solid rgba(255, 138, 122, 0.55); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5); }
+.death-panel h2 { margin: 0 0 6px; font-size: 20px; color: #ff9a8a; }
+.death-panel p { margin: 0 0 8px; color: var(--muted); }
+.death-panel .death-count { color: var(--ink); font-variant-numeric: tabular-nums; }
+
+@media (max-width: 640px) {
+  .target-frame { top: 10px; width: calc(100vw - 190px); min-width: 0; padding: 6px 8px 7px; }
+  .tf-tier { display: none; }
+  /* the target frame takes the strip between the title and the FPS counter, so the status panel and the toasts move down */
+  .status-panel { top: max(72px, calc(env(safe-area-inset-top) + 62px)); }
+  .toasts { top: 250px; }
+  #help .more { display: none; }
+  .hotbar { bottom: calc(max(14px, env(safe-area-inset-bottom)) + 84px); gap: 6px; }
+  .skill { width: 50px; height: 50px; }
+}

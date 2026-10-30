@@ -9,6 +9,8 @@ const RIGHT = ['KeyD', 'ArrowRight'];
 const WALK = ['ShiftLeft', 'ShiftRight'];
 const HANDLED = new Set([...FORWARD, ...BACK, ...LEFT, ...RIGHT, ...WALK]);
 type ActionHandler = (action: GameAction) => void;
+/** A primary-button press on the game canvas, in client pixels. */
+type ClickHandler = (clientX: number, clientY: number) => void;
 
 export class InputController {
   private readonly down = new Set<string>();
@@ -20,11 +22,22 @@ export class InputController {
   walk = false;
 
   private actionHandler: ActionHandler | null = null;
+  private clickHandler: ClickHandler | null = null;
 
   /** Registers the (single) handler for UI shortcuts. */
   onAction(handler: ActionHandler): void {
     this.actionHandler = handler;
   }
+
+  /** Registers the (single) handler for clicks on the canvas (selecting a monster). */
+  onClick(handler: ClickHandler): void {
+    this.clickHandler = handler;
+  }
+
+  private readonly onPointerDown = (e: PointerEvent): void => {
+    if (e.button !== 0 || !e.isPrimary) return;
+    this.clickHandler?.(e.clientX, e.clientY);
+  };
 
   private readonly onKeyDown = (e: KeyboardEvent): void => {
     if (e.ctrlKey || e.metaKey || e.altKey) return; // leave browser shortcuts alone
@@ -64,6 +77,7 @@ export class InputController {
     window.addEventListener('blur', this.reset);
     document.addEventListener('visibilitychange', this.reset);
     canvas.addEventListener('wheel', this.onWheel, { passive: false });
+    canvas.addEventListener('pointerdown', this.onPointerDown);
   }
 
   private any(codes: string[]): boolean {
@@ -91,5 +105,8 @@ export class InputController {
     window.removeEventListener('blur', this.reset);
     document.removeEventListener('visibilitychange', this.reset);
     this.canvas.removeEventListener('wheel', this.onWheel);
+    this.canvas.removeEventListener('pointerdown', this.onPointerDown);
+    this.actionHandler = null;
+    this.clickHandler = null;
   }
 }

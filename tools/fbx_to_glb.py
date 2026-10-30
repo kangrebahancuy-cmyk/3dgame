@@ -42,19 +42,25 @@ def build_rig(sc, lift):
 def convert(fbx_path, png_path, out_path, with_animations=True):
     sc = fbx_scene.load(fbx_path)
     meshes = [m for m in sc.meshes if m.skin]
-    if len(meshes) != 1:
-        raise SystemExit('expected exactly one skinned mesh, found %d' % len(meshes))
-    mesh = meshes[0]
+    if not meshes:
+        raise SystemExit('no skinned mesh found')
     g = fbx_scene.global_matrices(sc)
 
-    # ---- bind-pose world vertices, then lift so the sole is at y = 0
-    Mg = g[mesh.model_uid]
-    world_v = (Mg[:3, :3] @ mesh.vertices.T).T + Mg[:3, 3]
+    # ---- bind-pose world vertices of every skinned mesh (a character may be split into body + armour / weapon
+    # parts that share one skeleton and one texture; they are merged into a single glTF primitive)
+    world_parts, n_rots = [], []
+    for mesh in meshes:
+        Mg = g[mesh.model_uid]
+        world_parts.append((Mg[:3, :3] @ mesh.vertices.T).T + Mg[:3, 3])
+        n_rots.append(Mg[:3, :3])  # pure rotation for these assets (checked below)
+        if abs(np.linalg.det(Mg[:3, :3]) - 1.0) > 1e-4:
+            raise SystemExit('mesh node %s has scale/mirroring; not supported by this converter' % mesh.name)
+    offsets = np.cumsum([0] + [len(p) for p in world_parts])
+    world_v = np.concatenate(world_parts)
+    # lift so the lowest vertex (sole) is at y = 0
     lift = float(-world_v[:, 1].min())
     world_v[:, 1] += lift
-    n_rot = Mg[:3, :3]  # pure rotation for these assets (checked below)
-    if abs(np.linalg.det(n_rot) - 1.0) > 1e-4:
-        raise SystemExit('mesh node has scale/mirroring; not supported by this converter')
+    mesh = meshes[0]  # the body (first) mesh names the glTF mesh/node
 
     # ---- node table: every FBX Model except the mesh model itself
     bone_uids = [u for u in sc.order if sc.bones[u].kind.split('\x00')[0] != 'Mesh']
@@ -99,38 +105,42 @@ def convert(fbx_path, png_path, out_path, with_animations=True):
     corner_key = {}
     pos_out, nrm_out, uv_out, src_vertex = [], [], [], []
     indices = []
-    for poly, corners in zip(mesh.polys, mesh.poly_corner):
-        tri_corners = [(0, i, i + 1) for i in range(1, len(poly) - 1)]
-        for tri in tri_corners:
-            for t in tri:
-                vid, cid = poly[t], corners[t]
-                n = mesh.normals[cid] if mesh.normals is not None else (0, 1, 0)
-                uv = mesh.uvs[cid] if mesh.uvs is not None else (0, 0)
-                key = (vid, tuple(np.round(n, 5)), tuple(np.round(uv, 6)))
-                idx = corner_key.get(key)
-                if idx is None:
-                    idx = len(pos_out)
-                    corner_key[key] = idx
-                    pos_out.append(world_v[vid])
-                    nrm = n_rot @ np.asarray(n)
-                    nrm_out.append(nrm / (np.linalg.norm(nrm) or 1))
-                    uv_out.append((uv[0], 1.0 - uv[1]))  # FBX origin bottom-left -> glTF top-left
-                    src_vertex.append(vid)
-                indices.append(idx)
+    for mi, m in enumerate(meshes):
+        n_rot = n_rots[mi]
+        for poly, corners in zip(m.polys, m.poly_corner):
+            tri_corners = [(0, i, i + 1) for i in range(1, len(poly) - 1)]
+            for tri in tri_corners:
+                for t in tri:
+                    vid, cid = poly[t], corners[t]
+                    n = m.normals[cid] if m.normals is not None else (0, 1, 0)
+                    uv = m.uvs[cid] if m.uvs is not None else (0, 0)
+                    gid = int(offsets[mi]) + vid  # vertex id in the merged vertex list
+                    key = (gid, tuple(np.round(n, 5)), tuple(np.round(uv, 6)))
+                    idx = corner_key.get(key)
+                    if idx is None:
+                        idx = len(pos_out)
+                        corner_key[key] = idx
+                        pos_out.append(world_v[gid])
+                        nrm = n_rot @ np.asarray(n)
+                        nrm_out.append(nrm / (np.linalg.norm(nrm) or 1))
+                        uv_out.append((uv[0], 1.0 - uv[1]))  # FBX origin bottom-left -> glTF top-left
+                        src_vertex.append(gid)
+                    indices.append(idx)
     pos_out = np.array(pos_out)
     nrm_out = np.array(nrm_out)
     uv_out = np.array(uv_out)
     src_vertex = np.array(src_vertex)
 
     # ---- skin weights: top-4 per source vertex, renormalised
-    per_vertex = [[] for _ in range(len(mesh.vertices))]
-    for buid, idx, w, _, _ in mesh.skin:
-        j = joint_index[buid]
-        for vi, wi in zip(idx, w):
-            if wi > 0:
-                per_vertex[vi].append((wi, j))
-    joints4 = np.zeros((len(mesh.vertices), 4), dtype=np.uint16)
-    weights4 = np.zeros((len(mesh.vertices), 4), dtype=np.float32)
+    per_vertex = [[] for _ in range(len(world_v))]
+    for mi, m in enumerate(meshes):
+        for buid, idx, w, _, _ in m.skin:
+            j = joint_index[buid]
+            for vi, wi in zip(idx, w):
+                if wi > 0:
+                    per_vertex[int(offsets[mi]) + vi].append((wi, j))
+    joints4 = np.zeros((len(world_v), 4), dtype=np.uint16)
+    weights4 = np.zeros((len(world_v), 4), dtype=np.float32)
     dropped = 0.0
     for vi, lst in enumerate(per_vertex):
         lst.sort(reverse=True)
