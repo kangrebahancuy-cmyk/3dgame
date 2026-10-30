@@ -101,6 +101,11 @@ export class GameUi {
     this.setOpen(false);
   }
 
+  /** Shows a message in the same toast area as the inventory messages (used by the combat UI). */
+  notify(m: GameMessage): void {
+    this.toast(m);
+  }
+
   /** Call every frame with the player's ground position. */
   update(x: number, z: number): void {
     const t = this.session.promptTarget(x, z);

@@ -17,6 +17,10 @@ export class Player {
   readonly movement: MovementModel;
   private readonly animator: CharacterAnimator;
   private animSpeed = 0;
+  /** Combat body language (all 0 = the plain pose): bow forward (rad), step forward (m), sink (m). Set by the combat view. */
+  private pitch = 0;
+  private lunge = 0;
+  private sink = 0;
 
   constructor(
     readonly character: LoadedCharacter,
@@ -32,6 +36,13 @@ export class Player {
   get z(): number { return this.movement.z; }
   get y(): number { return this.character.root.position.y; }
   get animation(): CharacterAnimator { return this.animator; }
+
+  /** Applies the procedural combat pose on the next update (attack swing, flinch, falling down). */
+  setCombatPose(pitch: number, lunge: number, sink: number): void {
+    this.pitch = pitch;
+    this.lunge = lunge;
+    this.sink = sink;
+  }
 
   /** Puts the character back at the start, standing still and facing the camera's forward direction. */
   respawn(yaw = 0): void {
@@ -55,7 +66,8 @@ export class Player {
     const m = this.movement;
     const node = this.character.root;
     // Feet are placed with the same analytic function the ground mesh is built from: no sinking, no floating.
-    node.position.copyFromFloats(m.x, heightAt(m.x, m.z), m.z);
-    Quaternion.RotationAxisToRef(UP, m.yaw, node.rotationQuaternion!);
+    node.position.copyFromFloats(m.x + Math.sin(m.yaw) * this.lunge, heightAt(m.x, m.z) - this.sink, m.z + Math.cos(m.yaw) * this.lunge);
+    if (this.pitch === 0) Quaternion.RotationAxisToRef(UP, m.yaw, node.rotationQuaternion!);
+    else Quaternion.RotationYawPitchRollToRef(m.yaw, this.pitch, 0, node.rotationQuaternion!);
   }
 }

@@ -2,7 +2,7 @@
   "name": "3dgame",
   "version": "0.1.0",
   "private": true,
-  "description": "Smooth 3D MMORPG character-movement prototype (Babylon.js + TypeScript + Vite)",
+  "description": "3D MMORPG prototype: smooth movement, forest map, inventory, and real-time combat with monsters (Babylon.js + TypeScript + Vite)",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -11,7 +11,9 @@
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
     "catalog": "python3 tools/nature_catalog.py",
-    "convert:character": "python3 tools/fbx_to_glb.py \"assets/Fantasy_Heroes_Free/FBX/Characters/Hero.fbx\" \"assets/Fantasy_Heroes_Free/Texture/Texture.png\" public/models/hero.glb"
+    "convert:character": "python3 tools/fbx_to_glb.py \"assets/Fantasy_Heroes_Free/FBX/Characters/Hero.fbx\" \"assets/Fantasy_Heroes_Free/Texture/Texture.png\" public/models/hero.glb",
+    "convert:monsters": "for n in Ash_Walker Bone_Whittler Ironbound_Marauder; do python3 tools/fbx_to_glb.py \"assets/Orc_Free/FBX/Chatacters/$n.fbx\" assets/Orc_Free/Texture/Texture.png public/models/monsters/$n.glb || exit 1; done",
+    "test:ui": "node tools/ui_harness/run.cjs && node tools/ui_harness/combat_run.cjs"
   },
   "dependencies": {
     "@babylonjs/core": "^7.0.0",

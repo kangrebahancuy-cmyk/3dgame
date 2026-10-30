@@ -74,3 +74,14 @@ These are procedural, low-effort clips meant to make the movement system testabl
 file (bounding box, footprint, trunk radius, SHA-1), fails loudly if a file is missing or not self-contained, writes
 `src/world/forest/NatureCatalog.ts` and copies exactly those files, unchanged, to `public/models/nature/` so Vite serves them. The originals are never modified.
 Note Kenney's own spelling `tree_fat_darkh`. The kit's authored colours are a stylised teal/orange palette (`Preview.png`); the game recolours by material name unless `?palette=kenney` is used.
+
+## Monsters (combat)
+
+* **`assets/Orc_Free/FBX/Chatacters/{Ash_Walker,Bone_Whittler,Ironbound_Marauder}.fbx`** — texture `assets/Orc_Free/Texture/Texture.png`
+  (the folder name really is spelled `Chatacters`).
+* `npm run convert:monsters` writes `public/models/monsters/*.glb` + `*.meta.json`.
+* These characters are split into a body mesh plus armour/weapon parts skinned to the same skeleton, so
+  `tools/fbx_to_glb.py` now **merges every skinned mesh into one primitive** (one texture, one skeleton). A single-mesh
+  character such as the Hero converts byte-for-byte as before.
+* They carry the same 27-bone humanoid skeleton, so the authored Idle/Walk/Run clips work unchanged; there is still no
+  Attack/Hit/Death clip, so those are procedural (`src/combat/pose.ts`).

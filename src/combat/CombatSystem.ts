@@ -89,6 +89,11 @@ export class CombatSystem {
 
   // ------------------------------------------------------------------------------------------------ queries
 
+  /** The player's equipment (the basic attack's reach and speed come from the weapon in it). */
+  get equipment(): PlayerState['equipment'] {
+    return this.state.equipment;
+  }
+
   get playerDead(): boolean {
     return this.dead;
   }

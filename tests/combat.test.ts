@@ -812,3 +812,76 @@ test('lifecycle: an unsubscribed listener hears nothing more; a listener may uns
   assert.equal(heard, 1);
   assert.equal(r.c.events.listenerCount, 1);
 });
+
+// ------------------------------------------------------------------------------------------------ body language + input
+
+import { CORPSE_TIME, monsterPose, PlayerPoseDriver, type BodyPose } from '../src/combat/pose';
+import { actionForKey, hotbarSlot } from '../src/input/shortcuts';
+
+const blank = (): BodyPose => ({ pitch: 0, lunge: 0, sink: 0, flash: 0, visible: true });
+
+test('pose: monsters lean back in the windup, snap forward on the blow, flinch when hit, fall when dead, vanish later', () => {
+  const m = new Monster(1, type('ash_walker'), ash(0, 0));
+  const out = blank();
+  monsterPose(m, out);
+  assert.deepEqual(out, { pitch: 0, lunge: 0, sink: 0, flash: 0, visible: true });
+  m.enter('attack');
+  m.phase = 'windup';
+  m.phaseTime = type('ash_walker').attack.windup / 2;
+  assert.ok(monsterPose(m, out).pitch < -0.05, 'leans back');
+  m.phase = 'recover';
+  m.phaseTime = AI.recoverTime * 0.9;
+  assert.ok(monsterPose(m, out).pitch > 0.3 && out.lunge > 0.2, 'blow: forward');
+  m.phase = 'ready';
+  m.takeDamage(5);
+  assert.ok(monsterPose(m, out).flash > 0.9, 'hit flash');
+  m.takeDamage(500);
+  m.deadTime = 0.01;
+  assert.ok(monsterPose(m, out).pitch > -0.1);
+  m.deadTime = 1;
+  assert.ok(monsterPose(m, out).pitch < -1.4, 'lying down');
+  assert.equal(out.visible, true);
+  m.deadTime = 4;
+  assert.ok(monsterPose(m, out).sink > 0.5, 'sinking into the ground');
+  m.deadTime = CORPSE_TIME + 0.1;
+  assert.equal(monsterPose(m, out).visible, false);
+  m.respawn();
+  assert.equal(monsterPose(m, out).visible, true);
+  assert.equal(out.pitch, 0);
+});
+
+test('pose: the player swings, flinches, falls when defeated and gets up again', () => {
+  const d = new PlayerPoseDriver();
+  assert.equal(d.update(0.016, false).pitch, 0);
+  d.swingNow();
+  let max = -Infinity, min = Infinity, lunge = 0;
+  for (let i = 0; i < 30; i++) {
+    const p = d.update(0.016, false);
+    max = Math.max(max, p.pitch); min = Math.min(min, p.pitch); lunge = Math.max(lunge, p.lunge);
+  }
+  assert.ok(min < -0.1 && max > 0.3 && lunge > 0.1, `wind-up ${min}, swing ${max}, lunge ${lunge}`);
+  assert.equal(d.update(0.016, false).pitch, 0, 'back to neutral');
+  d.hurtNow();
+  assert.ok(d.update(0.016, false).flash > 0.9);
+  for (let i = 0; i < 60; i++) d.update(0.016, true);
+  assert.ok(d.update(0.016, true).pitch < -1.4, 'lying on the ground');
+  for (let i = 0; i < 60; i++) d.update(0.016, false);
+  assert.ok(Math.abs(d.update(0.016, false).pitch) < 1e-6, 'standing again');
+});
+
+test('input: hotbar digits, Tab to cycle (only on the game itself) and the old shortcuts still work', () => {
+  const key = (code: string, target: unknown = { tagName: 'CANVAS' }) => ({ code, repeat: false, ctrlKey: false, metaKey: false, altKey: false, target });
+  assert.equal(actionForKey(key('Digit1')), 'hotbar1');
+  assert.equal(actionForKey(key('Digit3')), 'hotbar3');
+  assert.equal(actionForKey(key('Numpad2')), 'hotbar2');
+  assert.equal(hotbarSlot('hotbar3'), 3);
+  assert.equal(hotbarSlot('interact'), null);
+  assert.equal(actionForKey(key('Tab')), 'cycleTarget');
+  assert.equal(actionForKey(key('Tab', { tagName: 'BUTTON' })), null, 'Tab keeps moving focus between buttons');
+  assert.equal(actionForKey(key('Digit1', { tagName: 'INPUT' })), null, 'typing a name with digits does not fire skills');
+  assert.equal(actionForKey({ ...key('Digit1'), repeat: true }), null, 'holding the key does not repeat');
+  assert.equal(actionForKey({ ...key('Digit1'), ctrlKey: true }), null);
+  assert.equal(actionForKey(key('KeyI')), 'toggleInventory');
+  assert.equal(actionForKey(key('KeyE')), 'interact');
+  assert.equal(actionForKey(key('Escape')), 'closePanels');
+});
