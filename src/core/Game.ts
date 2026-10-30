@@ -161,7 +161,16 @@ export class Game {
       this.player = new Player(character, this.cfg, this.world.collision);
       this.applyEquipmentSpeed();
       this.restart();
-      if (!this.combat) await this.setupCombat();
+      if (!this.combat) {
+        try {
+          await this.setupCombat();
+        } catch (e) {
+          // Combat is an add-on: if it cannot start, movement, the map and the inventory must keep working.
+          console.error('[3DGAME] combat could not start; continuing without it.', e);
+          this.stopCombat();
+          this.ui?.notify({ kind: 'error', text: 'Combat could not start (see the browser console). The rest of the game works.' });
+        }
+      }
       this.hud.showRestart(true);
       this.hud.hideLoading();
     } catch (e) {
@@ -244,8 +253,8 @@ export class Game {
     this.cam.snap(this.player.x, this.player.y, this.player.z);
   }
 
-  /** Stops the game: combat, input listeners, the scene and the engine. Safe to call once. */
-  dispose(): void {
+  /** Tears combat down completely (listeners, DOM, meshes); the rest of the game keeps running. */
+  private stopCombat(): void {
     this.combatReady = false;
     this.combatUi?.dispose();
     this.combatView?.dispose();
@@ -253,6 +262,12 @@ export class Game {
     this.combatUi = null;
     this.combatView = null;
     this.combat = null;
+    this.faceYaw = null;
+  }
+
+  /** Stops the game: combat, input listeners, the scene and the engine. Safe to call once. */
+  dispose(): void {
+    this.stopCombat();
     this.input?.dispose();
     this.input = null;
     window.removeEventListener('resize', this.onResize);
@@ -287,9 +302,16 @@ export class Game {
       cam.update(dt, p.x, p.y, p.z, wheel); // camera is updated AFTER the character moved: no one-frame lag/jitter
       this.ui?.update(p.x, p.z);
       if (this.combat && this.combatReady) {
-        this.combat.update(dt, { x: p.x, z: p.z, yaw: p.movement.yaw });
-        this.combatView?.update(dt);
-        this.combatUi?.update(dt);
+        try {
+          this.combat.update(dt, { x: p.x, z: p.z, yaw: p.movement.yaw });
+          this.combatView?.update(dt);
+          this.combatUi?.update(dt);
+        } catch (e) {
+          console.error('[3DGAME] combat failed while running; it was switched off, the rest of the game continues.', e);
+          p.setCombatPose(0, 0, 0);
+          this.stopCombat();
+          this.ui?.notify({ kind: 'error', text: 'Combat stopped after an error (see the browser console).' });
+        }
       }
     } else {
       cam.update(dt, 0, 0, 0, wheel);
